@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"ghostops/parser"
 	"os"
 )
 
@@ -22,5 +24,33 @@ func main() {
 	}
 
 	path := args[0]
-	fmt.Printf("reading file: %s (out: %s)\n", path, *outFile)
+	f, err := os.Open(path)
+	if err != nil {
+		fmt.Printf("error opening file: %v\n", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	total := 0
+	valid := 0
+	malformed := 0
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		total++
+		_, err := parser.ParseLine(sc.Text())
+		if err != nil {
+			malformed++
+			continue
+		}
+		valid++
+	}
+
+	if err := sc.Err(); err != nil {
+		fmt.Printf("error reading file: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("total lines: %d, valid: %d, malformed: %d\n", total, valid, malformed)
+	_ = outFile
 }
