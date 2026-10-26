@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"ghostops/analyzer"
 	"ghostops/parser"
 	"os"
 )
@@ -31,19 +32,16 @@ func main() {
 	}
 	defer f.Close()
 
-	total := 0
-	valid := 0
-	malformed := 0
+	an := analyzer.NewAnalyzer()
 
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
-		total++
-		_, err := parser.ParseLine(sc.Text())
+		entry, err := parser.ParseLine(sc.Text())
 		if err != nil {
-			malformed++
+			an.AddBad()
 			continue
 		}
-		valid++
+		an.AddGood(entry)
 	}
 
 	if err := sc.Err(); err != nil {
@@ -51,6 +49,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("total lines: %d, valid: %d, malformed: %d\n", total, valid, malformed)
+	res := an.GetResult()
+	fmt.Printf("total lines: %d, valid: %d, malformed: %d\n", res.TotalLines, res.ValidEntries, res.MalformedLines)
+	fmt.Printf("incidents: %d\n", len(res.Incidents))
 	_ = outFile
 }
