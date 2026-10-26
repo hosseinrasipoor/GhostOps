@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"ghostops/parser"
+	"sort"
 	"strings"
 	"time"
 )
@@ -131,8 +132,33 @@ func (a *Analyzer) AddGood(e *parser.LogEntry) {
 
 func (a *Analyzer) GetResult() Result {
 	r := a.res
+	list := make([]Incident, 0, len(a.m))
 	for _, inc := range a.m {
-		r.Incidents = append(r.Incidents, *inc)
+		list = append(list, *inc)
 	}
+
+	rank := map[string]int{
+		"FATAL": 4,
+		"ERROR": 3,
+		"WARN":  2,
+		"INFO":  1,
+	}
+
+	sort.Slice(list, func(i, j int) bool {
+		r1 := rank[list[i].Severity]
+		r2 := rank[list[j].Severity]
+		if r1 != r2 {
+			return r1 > r2
+		}
+		if list[i].Count != list[j].Count {
+			return list[i].Count > list[j].Count
+		}
+		if list[i].Service != list[j].Service {
+			return list[i].Service < list[j].Service
+		}
+		return list[i].Type < list[j].Type
+	})
+
+	r.Incidents = list
 	return r
 }

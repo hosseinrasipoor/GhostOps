@@ -8,6 +8,7 @@ import (
 	"ghostops/analyzer"
 	"ghostops/parser"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -59,13 +60,19 @@ func main() {
 	fmt.Printf("malformed lines: %d\n\n", res.MalformedLines)
 
 	fmt.Println("severities:")
-	for lvl, count := range res.Severities {
-		fmt.Printf("%s: %d\n", lvl, count)
+	order := []string{"INFO", "WARN", "ERROR", "FATAL"}
+	for _, lvl := range order {
+		fmt.Printf("%s: %d\n", lvl, res.Severities[lvl])
 	}
 
 	fmt.Println("\nservices:")
-	for svc, count := range res.Services {
-		fmt.Printf("%s: %d\n", svc, count)
+	svcList := make([]string, 0, len(res.Services))
+	for s := range res.Services {
+		svcList = append(svcList, s)
+	}
+	sort.Strings(svcList)
+	for _, s := range svcList {
+		fmt.Printf("%s: %d\n", s, res.Services[s])
 	}
 
 	fmt.Println("\nincidents:")
