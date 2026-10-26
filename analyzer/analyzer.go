@@ -62,11 +62,33 @@ func checkIncident(lvl, msg string) (string, string, bool) {
 	}
 
 	if lvl == "ERROR" {
-		if strings.Contains(lower, "sql") || strings.Contains(lower, "syntax") {
-			return "sql error", "sql query error", true
+		if strings.Contains(lower, "connect to database") || strings.Contains(lower, "timeout after") {
+			return "db timeout", "database timeout", true
 		}
 		if strings.Contains(lower, "gateway") || strings.Contains(lower, "502") {
 			return "gateway outage", "payment gateway outage", true
+		}
+		if strings.Contains(lower, "sql") || strings.Contains(lower, "syntax") {
+			return "sql error", "sql query error", true
+		}
+		if strings.Contains(lower, "nullpointer") {
+			return "null pointer", "null pointer exception", true
+		}
+		return "app error", "application error", true
+	}
+
+	if lvl == "WARN" {
+		if strings.Contains(lower, "memory") {
+			return "high memory", "memory warning", true
+		}
+		if strings.Contains(lower, "rate limit") {
+			return "rate limit", "rate limit reached", true
+		}
+		if strings.Contains(lower, "deprecated") {
+			return "deprecated api", "deprecated api call", true
+		}
+		if strings.Contains(lower, "pool") || strings.Contains(lower, "threshold") {
+			return "db pool warning", "database pool warning", true
 		}
 	}
 
@@ -82,20 +104,27 @@ func (a *Analyzer) AddGood(e *parser.LogEntry) {
 
 	name, desc, ok := checkIncident(e.Level, e.Message)
 	if ok {
-		k := name
+		k := name + ":" + e.Service
 		inc, exists := a.m[k]
 		if !exists {
 			inc = &Incident{
-				Type:     name,
-				Severity: e.Level,
-				Service:  e.Service,
-				Count:    1,
-				Desc:     desc,
+				Type:      name,
+				Severity:  e.Level,
+				Service:   e.Service,
+				Count:     1,
+				FirstSeen: e.Timestamp,
+				LastSeen:  e.Timestamp,
+				Desc:      desc,
 			}
 			a.m[k] = inc
 		} else {
 			inc.Count++
-			inc.LastSeen = e.Timestamp
+			if e.Timestamp.Before(inc.FirstSeen) {
+				inc.FirstSeen = e.Timestamp
+			}
+			if e.Timestamp.After(inc.LastSeen) {
+				inc.LastSeen = e.Timestamp
+			}
 		}
 	}
 }
