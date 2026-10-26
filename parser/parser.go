@@ -19,9 +19,14 @@ func ParseLine(line string) (*LogEntry, error) {
 		return nil, errors.New("empty line")
 	}
 
-	parts := strings.Split(line, " ")
+	parts := strings.SplitN(line, " ", 4)
 	if len(parts) < 4 {
 		return nil, errors.New("bad line")
+	}
+
+	lvl := parts[1]
+	if lvl != "INFO" && lvl != "WARN" && lvl != "ERROR" && lvl != "FATAL" {
+		return nil, errors.New("bad level")
 	}
 
 	ts, err := time.Parse(time.RFC3339, parts[0])
@@ -29,10 +34,16 @@ func ParseLine(line string) (*LogEntry, error) {
 		return nil, err
 	}
 
+	svc := parts[2]
+	msg := parts[3]
+	if svc == "" || msg == "" {
+		return nil, errors.New("missing field")
+	}
+
 	return &LogEntry{
 		Timestamp: ts,
-		Level:     parts[1],
-		Service:   parts[2],
-		Message:   parts[3],
+		Level:     lvl,
+		Service:   svc,
+		Message:   msg,
 	}, nil
 }
